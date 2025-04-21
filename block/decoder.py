@@ -6,33 +6,41 @@ from multihead_attention import MultiHeadAttention
 from residual import ResidualConnection
 
 
-class EncoderBlock(nn.Module):
+class DecoderBlock(nn.Module):
     def __init__(
         self,
         self_att_block: MultiHeadAttention,
+        cross_att_block: MultiHeadAttention,
         feed_forwad: FeedForwardBlock,
         dropout: float,
     ):
         super().__init__()
         self.self_att_block = self_att_block
+        self.cross_att_block = cross_att_block
         self.ff = feed_forwad
         self.residual_connections = nn.ModuleList(
-            [ResidualConnection(dropout) for _ in range(2)]
+            [ResidualConnection(dropout) for _ in range(3)]
         )
 
-    def forward(self, x, src_mask):
-        x = self.residual_connections[0](x, lambda x: self.self_att_block(x, x, x, src_mask))
-        x = self.residual_connections[1](x, self.ff)
+    def forward(self, x, encoder_output, src_mask, tgt_mask):
+        x = self.residual_connections[0](
+            x, lambda x: self.self_att_block(x, x, x, tgt_mask)
+        )
+        x = self.residual_connections[1](
+            x,
+            lambda x: self.cross_att_block(x, encoder_output, encoder_output, src_mask),
+        )
+        x = self.residual_connections[2](x, self.ff)
         return x
 
 
-class Encoder(nn.Module):
+class Decoder(nn.Module):
     def __init__(self, layers: nn.ModuleList):
-        super().__init__()
         self.layers = layers
         self.norm = LayerNormalization()
 
-    def forward(self, x, mask):
+    def forward(self, x, encoder_output, src_mask, tgt_mask):
         for layer in self.layers:
-            x = layer(x, mask)
+            x = layer(x, encoder_output, src_mask, tgt_mask)
+
         return self.norm(x)
