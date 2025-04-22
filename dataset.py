@@ -119,38 +119,37 @@ def causal_mask(size):
     return mask == 0
 
 
+def pruning_sentences(
+    ds, max_sentence_len, tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
+):
+    for part in ds:
+        # Filter out items where any sentence exceeds max_sentence_len
+        ds[part] = [
+            item
+            for item in ds[part]
+            if all(
+                len(tokenizer_src.encode(sentence).ids) <= max_sentence_len
+                for sentence in item["translation"][src_lan]
+            )
+            and all(
+                len(tokenizer_tgt.encode(sentence).ids) <= max_sentence_len
+                for sentence in item["translation"][tgt_lan]
+            )
+        ]
+
+
 def get_all_sentences(ds, lang):
     for item in ds["train"]:
         sentence = item["translation"][lang]
-        if len(sentence) > 256:
-            continue  # Skip sentences longer than 256 characters
         yield sentence
 
     for item in ds["validation"]:
         sentence = item["translation"][lang]
-        if len(sentence) > 256:
-            continue  # Skip sentences longer than 256 characters
         yield sentence
 
     for item in ds["test"]:
         sentence = item["translation"][lang]
-        if len(sentence) > 256:
-            continue  # Skip sentences longer than 256 characters
         yield sentence
-
-
-def get_max_len(ds, src_lan, tgt_lan, src_tokenizer, tgt_tokenizer):
-    src_max_len = 0
-    tgt_max_len = 0
-
-    for dataset in ds:
-        for item in ds[dataset]:
-            src_ids = src_tokenizer.encode(item["translation"][src_lan])
-            tgt_ids = tgt_tokenizer.encode(item["translation"][tgt_lan])
-            src_max_len = max(src_max_len, len(src_ids))
-            tgt_max_len = max(tgt_max_len, len(tgt_ids))
-
-    return src_max_len, tgt_max_len
 
 
 def get_or_build_tokenizer(ds, lang):
@@ -163,7 +162,13 @@ def get_or_build_tokenizer(ds, lang):
         trainer = WordLevelTrainer(
             special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]"], min_frequency=2
         )
-        tokenizer.train_from_iterator(get_all_sentences(ds, lang), trainer=trainer)
+        tokenizer.train_from_iterator(
+            get_all_sentences(
+                ds,
+                lang,
+            ),
+            trainer=trainer,
+        )
         tokenizer.save(str(tokenizer_path))
     else:
         tokenizer = Tokenizer.from_file(str(tokenizer_path))
@@ -186,6 +191,10 @@ def get_ds():
 
     tokenizer_src = get_or_build_tokenizer(ds_raw, src_lan)
     tokenizer_tgt = get_or_build_tokenizer(ds_raw, tgt_lan)
+
+    pruning_sentences(
+        ds_raw, config["seq_len"], tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
+    )
 
     train_ds = BilingualDataset(
         ds_raw["train"],
