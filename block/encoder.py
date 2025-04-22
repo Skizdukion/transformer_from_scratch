@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-from feed_forward import FeedForwardBlock
-from layer_norm import LayerNormalization
-from multihead_attention import MultiHeadAttention
-from residual import ResidualConnection
+from block.feed_forward import FeedForwardBlock
+from block.layer_norm import LayerNormalization
+from block.multihead_attention import MultiHeadAttention
+from block.residual import ResidualConnection
 
 
 class EncoderBlock(nn.Module):
