@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import warnings
 
+
 def train_model():
     config = get_config()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,7 +44,8 @@ def train_model():
 
     initial_epoch = 0
     global_step = 0
-    if config["preload"]:
+
+    if config.get("preload") is not None:
         model_filename = get_weights_file_path(config, config["preload"])
         print(f"Preloading model {model_filename}")
         state = torch.load(model_filename)
@@ -69,7 +71,7 @@ def train_model():
                 encoder_output, encoder_mask, decoder_input, decoder_mask
             )
 
-            projection_output = model.projection(decoder_output)
+            projection_output = model.projection_layer(decoder_output)
 
             label = batch["label"].to(device)
             loss = loss_fn(
@@ -92,12 +94,16 @@ def train_model():
             global_step += 1
 
     model_filename = get_weights_file_path(config, f"{epoch:02d}")
-    torch.save({
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'global_step': global_step
-    }, model_filename)
+    torch.save(
+        {
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "global_step": global_step,
+        },
+        model_filename,
+    )
+
 
 if __name__ == "__main__":
     # warnings.filterwarnings("ignore")

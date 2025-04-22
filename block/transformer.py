@@ -29,33 +29,37 @@ class Transformer(nn.Module):
         self.num_layers = num_layer
         self.src_input_embedding = InputEmbedding(d_model, src_vocab_size)
         self.tgt_input_embedding = InputEmbedding(d_model, tgt_vocab_size)
-        self.position_encoding = PositionEncoding(d_model, max_seq_len)
+        self.position_encoding = PositionEncoding(d_model, max_seq_len, dropout)
         self.encoder = Encoder(
+            d_model,
             nn.ModuleList(
                 [
                     EncoderBlock(
+                        d_model,
                         MultiHeadAttention(d_model, num_head, dropout),
-                        FeedForwardBlock(d_model, d_ff),
+                        FeedForwardBlock(d_model, d_ff, dropout),
                         dropout,
                     )
                     for _ in range(num_layer)
                 ]
-            )
+            ),
         )
         self.decoder = Decoder(
+            d_model,
             nn.ModuleList(
                 [
                     DecoderBlock(
+                        d_model,
                         MultiHeadAttention(d_model, num_head, dropout),
                         MultiHeadAttention(d_model, num_head, dropout),
-                        FeedForwardBlock(d_model, d_ff),
+                        FeedForwardBlock(d_model, d_ff, dropout),
                         dropout,
                     )
                     for _ in range(num_layer)
                 ]
-            )
+            ),
         )
-        self.projection = ProjectionLayer(d_model, src_vocab_size)
+        self.projection_layer = ProjectionLayer(d_model, tgt_vocab_size)
 
         for p in self.parameters():
             if p.dim() > 1:
@@ -74,4 +78,4 @@ class Transformer(nn.Module):
         return tgt
 
     def projection(self, x):
-        return self.projection(x)
+        return self.projection_layer(x)

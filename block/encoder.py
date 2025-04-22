@@ -9,6 +9,7 @@ from block.residual import ResidualConnection
 class EncoderBlock(nn.Module):
     def __init__(
         self,
+        features: int,
         self_att_block: MultiHeadAttention,
         feed_forwad: FeedForwardBlock,
         dropout: float,
@@ -17,20 +18,22 @@ class EncoderBlock(nn.Module):
         self.self_att_block = self_att_block
         self.ff = feed_forwad
         self.residual_connections = nn.ModuleList(
-            [ResidualConnection(dropout) for _ in range(2)]
+            [ResidualConnection(features, dropout) for _ in range(2)]
         )
 
     def forward(self, x, src_mask):
-        x = self.residual_connections[0](x, lambda x: self.self_att_block(x, x, x, src_mask))
+        x = self.residual_connections[0](
+            x, lambda x: self.self_att_block(x, x, x, src_mask)
+        )
         x = self.residual_connections[1](x, self.ff)
         return x
 
 
 class Encoder(nn.Module):
-    def __init__(self, layers: nn.ModuleList):
+    def __init__(self, features: int, layers: nn.ModuleList):
         super().__init__()
         self.layers = layers
-        self.norm = LayerNormalization()
+        self.norm = LayerNormalization(features)
 
     def forward(self, x, mask):
         for layer in self.layers:

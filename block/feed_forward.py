@@ -12,7 +12,7 @@ class FeedForwardBlock(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.ln_2 = nn.Linear(d_ff, d_model)
 
-    def foward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor):
         x = self.ln_1(x)
         x = torch.relu(x)
         x = self.dropout(x)

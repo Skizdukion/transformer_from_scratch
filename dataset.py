@@ -121,21 +121,30 @@ def causal_mask(size):
 
 def get_all_sentences(ds, lang):
     for item in ds["train"]:
-        yield item["translation"][lang]
+        sentence = item["translation"][lang]
+        if len(sentence) > 256:
+            continue  # Skip sentences longer than 256 characters
+        yield sentence
 
     for item in ds["validation"]:
-        yield item["translation"][lang]
+        sentence = item["translation"][lang]
+        if len(sentence) > 256:
+            continue  # Skip sentences longer than 256 characters
+        yield sentence
 
     for item in ds["test"]:
-        yield item["translation"][lang]
+        sentence = item["translation"][lang]
+        if len(sentence) > 256:
+            continue  # Skip sentences longer than 256 characters
+        yield sentence
 
 
 def get_max_len(ds, src_lan, tgt_lan, src_tokenizer, tgt_tokenizer):
     src_max_len = 0
     tgt_max_len = 0
 
-    for dataset in ds["train"]:
-        for item in dataset:
+    for dataset in ds:
+        for item in ds[dataset]:
             src_ids = src_tokenizer.encode(item["translation"][src_lan])
             tgt_ids = tgt_tokenizer.encode(item["translation"][tgt_lan])
             src_max_len = max(src_max_len, len(src_ids))
@@ -144,11 +153,10 @@ def get_max_len(ds, src_lan, tgt_lan, src_tokenizer, tgt_tokenizer):
     return src_max_len, tgt_max_len
 
 
-tokenizer_path = ""
-
-
 def get_or_build_tokenizer(ds, lang):
-    tokenizer_path = Path(tokenizer_path.format(lang))
+    config = get_config()
+
+    tokenizer_path = Path(config["tokenizer_file"].format(lang))
     if not Path.exists(tokenizer_path):
         tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
         tokenizer.pre_tokenizer = Whitespace()
@@ -158,7 +166,7 @@ def get_or_build_tokenizer(ds, lang):
         tokenizer.train_from_iterator(get_all_sentences(ds, lang), trainer=trainer)
         tokenizer.save(str(tokenizer_path))
     else:
-        tokenizer = Tokenizer.from_file(tokenizer_path)
+        tokenizer = Tokenizer.from_file(str(tokenizer_path))
 
     return tokenizer
 
@@ -180,23 +188,38 @@ def get_ds():
     tokenizer_tgt = get_or_build_tokenizer(ds_raw, tgt_lan)
 
     train_ds = BilingualDataset(
-        ds_raw["train"], tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
+        ds_raw["train"],
+        tokenizer_src,
+        tokenizer_tgt,
+        src_lan,
+        tgt_lan,
+        config["seq_len"],
     )
 
     test_ds = BilingualDataset(
-        ds_raw["test"], tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
+        ds_raw["test"],
+        tokenizer_src,
+        tokenizer_tgt,
+        src_lan,
+        tgt_lan,
+        config["seq_len"],
     )
 
     val_ds = BilingualDataset(
-        ds_raw["validation"], tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
+        ds_raw["validation"],
+        tokenizer_src,
+        tokenizer_tgt,
+        src_lan,
+        tgt_lan,
+        config["seq_len"],
     )
 
-    max_len_src, max_len_tgt = get_max_len(
-        ds_raw, src_lan, tgt_lan, tokenizer_src, tokenizer_tgt
-    )
+    # max_len_src, max_len_tgt = get_max_len(
+    #     ds_raw, src_lan, tgt_lan, tokenizer_src, tokenizer_tgt
+    # )
 
-    print(f"Max length of source sentence: {max_len_src}")
-    print(f"Max length of target sentence: {max_len_tgt}")
+    # print(f"Max length of source sentence: {max_len_src}")
+    # print(f"Max length of target sentence: {max_len_tgt}")
 
     train_data_loader = DataLoader(
         train_ds, batch_size=config["batch_size"], shuffle=True

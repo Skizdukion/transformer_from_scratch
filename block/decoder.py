@@ -9,6 +9,7 @@ from block.residual import ResidualConnection
 class DecoderBlock(nn.Module):
     def __init__(
         self,
+        features: int,
         self_att_block: MultiHeadAttention,
         cross_att_block: MultiHeadAttention,
         feed_forwad: FeedForwardBlock,
@@ -19,7 +20,7 @@ class DecoderBlock(nn.Module):
         self.cross_att_block = cross_att_block
         self.ff = feed_forwad
         self.residual_connections = nn.ModuleList(
-            [ResidualConnection(dropout) for _ in range(3)]
+            [ResidualConnection(features, dropout) for _ in range(3)]
         )
 
     def forward(self, x, encoder_output, src_mask, tgt_mask):
@@ -35,9 +36,10 @@ class DecoderBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, layers: nn.ModuleList):
+    def __init__(self, features: int, layers: nn.ModuleList):
+        super().__init__()
         self.layers = layers
-        self.norm = LayerNormalization()
+        self.norm = LayerNormalization(features)
 
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         for layer in self.layers:
