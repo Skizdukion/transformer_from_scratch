@@ -9,7 +9,7 @@ from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from torch.utils.data import Dataset, DataLoader
 
-from config import get_config
+from language_translation.config import get_config
 
 
 class BilingualDataset(Dataset):
