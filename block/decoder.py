@@ -41,6 +41,7 @@ class Decoder(nn.Module):
         self.layers = layers
         self.norm = LayerNormalization(features)
 
+    # Return dims: batch_len, seq_len, d_model
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         for layer in self.layers:
             x = layer(x, encoder_output, src_mask, tgt_mask)

@@ -2,7 +2,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
@@ -119,23 +119,25 @@ def causal_mask(size):
     return mask == 0
 
 
-def pruning_sentences(
-    ds, max_sentence_len, tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
-):
-    for part in ds:
-        # Filter out items where any sentence exceeds max_sentence_len
-        ds[part] = [
-            item
-            for item in ds[part]
-            if all(
-                len(tokenizer_src.encode(sentence).ids) <= max_sentence_len
-                for sentence in item["translation"][src_lan]
+def pruning_ds(ds_dict, pre_tokenizer, seq_len, max_samples=10000):
+    pruned = {}
+
+    for split, ds in ds_dict.items():
+        # Step 1: Filter by tokenized length across all languages
+        filtered = ds.filter(
+            lambda example: all(
+                len(pre_tokenizer.pre_tokenize_str(text)) < (seq_len - 2)
+                for text in example["translation"].values()
             )
-            and all(
-                len(tokenizer_tgt.encode(sentence).ids) <= max_sentence_len
-                for sentence in item["translation"][tgt_lan]
-            )
-        ]
+        )
+
+        # Step 2: Truncate to max_samples if needed
+        if len(filtered) > max_samples:
+            filtered = filtered.select(range(max_samples))
+
+        pruned[split] = filtered
+
+    return DatasetDict(pruned)
 
 
 def get_all_sentences(ds, lang):
@@ -160,7 +162,7 @@ def get_or_build_tokenizer(ds, lang):
         tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
         tokenizer.pre_tokenizer = Whitespace()
         trainer = WordLevelTrainer(
-            special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]"], min_frequency=2
+            special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]"], min_frequency=5
         )
         tokenizer.train_from_iterator(
             get_all_sentences(
@@ -186,18 +188,16 @@ def get_ds():
         config["datasource"], config["data_name"], revision=config["data_revision"]
     )
 
+    ds_pruned = pruning_ds(ds_raw, Whitespace(), config["seq_len"])
+
     src_lan = config["lang_src"]
     tgt_lan = config["lang_tgt"]
 
-    tokenizer_src = get_or_build_tokenizer(ds_raw, src_lan)
-    tokenizer_tgt = get_or_build_tokenizer(ds_raw, tgt_lan)
-
-    pruning_sentences(
-        ds_raw, config["seq_len"], tokenizer_src, tokenizer_tgt, src_lan, tgt_lan
-    )
+    tokenizer_src = get_or_build_tokenizer(ds_pruned, src_lan)
+    tokenizer_tgt = get_or_build_tokenizer(ds_pruned, tgt_lan)
 
     train_ds = BilingualDataset(
-        ds_raw["train"],
+        ds_pruned["train"],
         tokenizer_src,
         tokenizer_tgt,
         src_lan,
@@ -206,7 +206,7 @@ def get_ds():
     )
 
     test_ds = BilingualDataset(
-        ds_raw["test"],
+        ds_pruned["test"],
         tokenizer_src,
         tokenizer_tgt,
         src_lan,
@@ -215,7 +215,7 @@ def get_ds():
     )
 
     val_ds = BilingualDataset(
-        ds_raw["validation"],
+        ds_pruned["validation"],
         tokenizer_src,
         tokenizer_tgt,
         src_lan,

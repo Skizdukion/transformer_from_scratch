@@ -4,9 +4,9 @@ from pathlib import Path
 def get_config():
     return {
         "batch_size": 8,
-        "num_epochs": 20,
+        "num_epochs": 60,
         "lr": 10**-4,
-        "seq_len": 128,
+        "seq_len": 350,
         "d_model": 256,
         "d_ff": 2048,
         "num_head": 8,
@@ -19,8 +19,8 @@ def get_config():
         "lang_tgt": "en",
         "model_folder": "weights",
         "model_basename": "tmodel_",
-        # "preload": "latest",
-        "tokenizer_file": "tokenizer_{0}.json",
+        "preload": "latest",
+        "tokenizer_file": "tokenizer/{0}.json",
         "experiment_name": "runs/tmodel",
     }
 
