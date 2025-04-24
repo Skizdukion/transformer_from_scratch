@@ -5,11 +5,8 @@ from block.encoder import Encoder, EncoderBlock
 from block.feed_forward import FeedForwardBlock
 from block.multihead_attention import MultiHeadAttention
 from block.vision_transformer import VisionTransformer
-from vision_transformer.config import (
-    get_config,
-    get_weights_file_path,
-    latest_weights_file_path,
-)
+from utils.weight_retrieve import get_weights_file_path, latest_weights_file_path
+from vision_transformer.config import get_config
 from vision_transformer.dataset import get_ds
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn

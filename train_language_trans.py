@@ -2,11 +2,13 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 from block.transformer import Transformer
-from language_translation.config import get_config, get_weights_file_path, latest_weights_file_path
+from language_translation.config import get_config
 from language_translation.dataset import causal_mask, get_ds
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import warnings
+
+from utils.weight_retrieve import get_weights_file_path, latest_weights_file_path
 
 
 def greedy_decode(
