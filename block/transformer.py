@@ -6,7 +6,7 @@ from block.encoder import Encoder, EncoderBlock
 from block.feed_forward import FeedForwardBlock
 from block.input_embedding import InputEmbedding
 from block.multihead_attention import MultiHeadAttention
-from block.positional_encoding import PositionEncoding
+from block.positional_encoding import SinusoidalPositionEncoding
 from block.projection import ProjectionLayer
 
 
@@ -29,7 +29,7 @@ class Transformer(nn.Module):
         self.num_layers = num_layer
         self.src_input_embedding = InputEmbedding(d_model, src_vocab_size)
         self.tgt_input_embedding = InputEmbedding(d_model, tgt_vocab_size)
-        self.position_encoding = PositionEncoding(d_model, max_seq_len, dropout)
+        self.position_encoding = SinusoidalPositionEncoding(d_model, max_seq_len, dropout)
         self.encoder = Encoder(
             d_model,
             nn.ModuleList(

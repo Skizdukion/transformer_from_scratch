@@ -32,6 +32,7 @@ class EncoderBlock(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, features: int, layers: nn.ModuleList):
         super().__init__()
+        self.features = features
         self.layers = layers
         self.norm = LayerNormalization(features)
 
