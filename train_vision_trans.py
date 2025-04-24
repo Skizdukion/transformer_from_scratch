@@ -13,98 +13,46 @@ import torch.nn as nn
 import warnings
 
 
-# def greedy_decode(
-#     model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device
-# ):
-#     sos_idx = tokenizer_src.token_to_id("[SOS]")
-#     eos_idx = tokenizer_src.token_to_id("[EOS]")
+def run_validation(model, validation_loader, device, loss_fn, print_msg=print):
+    """
+    Validates the Vision Transformer model on the validation set.
 
-#     encoder_output = model.encode(source, source_mask)
-#     decoder_input = torch.empty(1, 1).fill_(sos_idx).type_as(source).to(device)
-#     while True:
-#         if decoder_input.size(1) == max_len:
-#             break
+    Args:
+        model (nn.Module): The trained Vision Transformer model.
+        validation_loader (DataLoader): DataLoader for the validation dataset.
+        device (torch.device): Device to run the model on.
+        loss_fn (nn.Module): Loss function (e.g., CrossEntropyLoss).
+        print_msg (Callable): Function to print output (defaults to print).
 
-#         decoder_mask = (
-#             causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
-#         )
+    Returns:
+        float: average loss over the validation set.
+        float: accuracy on the validation set.
+    """
+    model.eval()
+    total_loss = 0.0
+    correct = 0
+    total = 0
 
-#         # Decoder dims: 1 (batch_size), cur_seq_len -> outdim batch_size, cur_seq_len, d_model
-#         out = model.decode(encoder_output, source_mask, decoder_input, decoder_mask)
+    with torch.no_grad():
+        for batch in validation_loader:
+            images, labels = batch["img"], batch["label"]
+            images, labels = images.to(device), labels.to(device)
 
-#         # Take only the last sequence to predict the next token, exactly like in training
-#         prob = model.projection_layer(out[:, -1])
+            outputs = model(images, mask=None)  # shape: (batch_size, seq_len, d_model)
+            cls_outputs = outputs[:, 0, :]  # Use the [CLS] token for classification
 
-#         _, next_word = torch.max(prob, dim=1)
+            loss = loss_fn(cls_outputs, labels)
+            total_loss += loss.item() * labels.size(0)
 
-#         decoder_input = torch.cat(
-#             [
-#                 decoder_input,
-#                 torch.empty(1, 1).type_as(source).fill_(next_word.item()).to(device),
-#             ],
-#             dim=1,
-#         )
+            preds = cls_outputs.argmax(dim=1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
 
-#         if next_word == eos_idx:
-#             break
+    avg_loss = total_loss / total
+    accuracy = correct / total
 
-#     return decoder_input.squeeze(0)
-
-
-# def run_validation(
-#     model,
-#     validation_ds,
-#     tokenizer_src,
-#     tokenizer_tgt,
-#     max_len,
-#     device,
-#     print_msg,
-#     num_examples=2,
-# ):
-#     model.eval()
-#     count = 0
-#     source_texts = []
-#     expected = []
-#     predicted = []
-
-#     console_width = 80
-
-#     with torch.no_grad():
-#         for batch in validation_ds:
-#             count += 1
-#             encoder_input = batch["encoder_input"].to(device)
-#             encoder_mask = batch["encoder_mask"].to(device)
-
-#             assert encoder_input.size(0) == 1
-
-#             model_out = greedy_decode(
-#                 model,
-#                 encoder_input,
-#                 encoder_mask,
-#                 tokenizer_src,
-#                 tokenizer_tgt,
-#                 max_len,
-#                 device,
-#             )
-
-#             source_text = batch["src_text"]
-#             target_text = batch["tgt_text"]
-
-#             model_out_text = tokenizer_tgt.decode(model_out.detach().cpu().numpy())
-
-#             source_texts.append(source_text)
-#             expected.append(target_text)
-#             predicted.append(model_out_text)
-
-#             print_msg("-" * console_width)
-#             print_msg(f"SOURCE: {source_text}")
-#             print_msg(f"TARGET: {target_text}")
-#             print_msg(f"PREDICT: {model_out_text}")
-
-#             if count == num_examples:
-#                 break
-
-#     # if writer:
+    print_msg(f"Validation Loss: {avg_loss:.4f} | Accuracy: {accuracy:.2%}")
+    return avg_loss, accuracy
 
 
 def train_model():
@@ -198,14 +146,13 @@ def train_model():
             optimizer.zero_grad(set_to_none=True)
 
             global_step += 1
-            # if global_step % 100 == 0:
-            #     run_validation(
-            #         model,
-            #         val_data_loader,
-            #         config["seq_len"],
-            #         device,
-            #         lambda msg: batch_iterator.write(msg),
-            #     )
+
+        run_validation(
+            model,
+            val_data_loader,
+            device,
+            lambda msg: batch_iterator.write(msg),
+        )
 
         model_filename = get_weights_file_path(config, f"{epoch:02d}")
         torch.save(
