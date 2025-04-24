@@ -181,8 +181,8 @@ def train_model():
 
             images, labels = batch
 
-            images.to(device)
-            labels.to(device)
+            images = images.to(device)
+            labels = labels.to(device)
 
             outputs = model(images, mask)
 
