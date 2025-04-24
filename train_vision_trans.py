@@ -35,16 +35,12 @@ def run_validation(model, validation_loader, device, loss_fn, print_msg=print):
 
     with torch.no_grad():
         for batch in validation_loader:
-            images, labels = batch["img"], batch["label"]
+            images, labels = batch
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images, mask=None)  # shape: (batch_size, seq_len, d_model)
-            cls_outputs = outputs[:, 0, :]  # Use the [CLS] token for classification
 
-            loss = loss_fn(cls_outputs, labels)
-            total_loss += loss.item() * labels.size(0)
-
-            preds = cls_outputs.argmax(dim=1)
+            preds = outputs.argmax(dim=1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
