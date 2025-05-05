@@ -33,16 +33,15 @@ class VisionTransformer(nn.Module):
         self.image_pos_emb = PositionEmbedding(
             self.image_encoder.features, self.image_emb.num_patch + 1, dropout
         )
-        
+
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.image_encoder.features))
         nn.init.trunc_normal_(self.cls_token, std=0.02)
-
 
         # self.txt_emb = InputEmbedding(self.text_encoder.features, txt_vocab_size)
         # self.txt_pos_enc = SinusoidalPositionEncoding(
         #     self.text_encoder.features, txt_seq_len, dropout
         # )
-        
+
         self.classifier = nn.Linear(self.image_encoder.features, num_classes)
 
         for p in self.parameters():
@@ -53,11 +52,11 @@ class VisionTransformer(nn.Module):
     def encode_image(self, x, mask):
         x = self.image_emb(x)
         x = x.flatten(2).transpose(1, 2)
-        
+
         B = x.size(0)
         cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, d_model)
-        
-        x = torch.cat((cls_tokens, x), dim=1) 
+
+        x = torch.cat((cls_tokens, x), dim=1)
 
         x = self.image_pos_emb(x)
         x = self.image_encoder(x, mask)
