@@ -1,19 +1,17 @@
 from pathlib import Path
 import torch
 from tqdm import tqdm
-from block.encoder import Encoder, EncoderBlock
-from block.feed_forward import FeedForwardBlock
-from block.multihead_attention import MultiHeadAttention
-from block.vision_transformer import VisionTransformer
+from block.encoder import DownScaleBlock, Encoder
+from block.vision_transformer import CustomClassifyVisionTransformer
 from utils.weight_retrieve import get_weights_file_path, latest_weights_file_path
-from vision_transformer.config import get_config
-from vision_transformer.dataset import get_ds
+from custom_vision_trans.config import get_config
+from custom_vision_trans.dataset import get_ds
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import warnings
 
 
-def run_validation(model, validation_loader, device, loss_fn, print_msg=print):
+def run_validation(model, validation_loader, device, print_msg=print):
     """
     Validates the Vision Transformer model on the validation set.
 
@@ -38,7 +36,7 @@ def run_validation(model, validation_loader, device, loss_fn, print_msg=print):
             images, labels = batch
             images, labels = images.to(device), labels.to(device)
 
-            outputs = model(images, mask=None)  # shape: (batch_size, seq_len, d_model)
+            outputs = model(images)  # shape: (batch_size, seq_len, d_model)
 
             preds = outputs.argmax(dim=1)
             correct += (preds == labels).sum().item()
@@ -60,33 +58,26 @@ def train_model():
 
     (train_data_loader, val_data_loader, num_classes) = get_ds()
 
-    d_model = config["d_model"]
-    num_head = config["num_head"]
-    dropout = config["dropout"]
-    d_ff = config["d_ff"]
-    num_layer = config["num_layer"]
+    blocks = []
 
-    encoder = Encoder(
-        d_model,
-        nn.ModuleList(
-            [
-                EncoderBlock(
-                    d_model,
-                    MultiHeadAttention(d_model, num_head, dropout),
-                    FeedForwardBlock(d_model, d_ff, dropout),
-                    dropout,
-                )
-                for _ in range(num_layer)
-            ]
-        ),
-    )
+    for layer_config in config["layers"]:
+        block = DownScaleBlock(
+            layer_config["in_feature"],
+            layer_config["out_feature"],
+            layer_config["in_seq"],
+            layer_config["out_seq"],
+            layer_config["d_ff"],
+            layer_config["num_head"],
+            layer_config["dropout"],
+        )
+        blocks.append(block)
 
-    model = VisionTransformer(
-        encoder, config["image_size"], config["patch_size"], num_classes, dropout
-    )
+    encoder = Encoder(blocks[len(blocks) - 1].out_feature, nn.ModuleList(blocks))
+
+    model = CustomClassifyVisionTransformer(encoder, num_classes)
 
     model.to(device)
-    
+
     print(f"Model total params {model.num_params}")
 
     # Tensorboard
@@ -127,7 +118,7 @@ def train_model():
             images = images.to(device)
             labels = labels.to(device)
 
-            outputs = model(images, mask)
+            outputs = model(images)
 
             loss = loss_fn(outputs, labels)
             batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})

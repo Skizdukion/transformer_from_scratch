@@ -5,7 +5,7 @@ from block.encoder import Encoder, EncoderBlock
 from block.feed_forward import FeedForwardBlock
 from block.input_embedding import InputEmbedding
 from block.multihead_attention import MultiHeadAttention
-from block.patch_embedding import PatchEmbedding
+from block.patch_embedding import LocalEmbedding, PatchEmbedding
 from block.positional_encoding import PositionEmbedding, SinusoidalPositionEncoding
 
 
@@ -44,9 +44,14 @@ class VisionTransformer(nn.Module):
 
         self.classifier = nn.Linear(self.image_encoder.features, num_classes)
 
+        self.num_params = 0
+
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
+
+            if p.requires_grad:
+                self.num_params += p.numel()
 
     # (batch_len, )
     def encode_image(self, x, mask):
@@ -68,8 +73,37 @@ class VisionTransformer(nn.Module):
         logits = self.classifier(cls_token)  # (batch, num_classes)
         return logits
 
-    # def encode_text(self, x, mask):
-    #     x = self.txt_emb(x)
-    #     x = self.txt_pos_enc(x)
-    #     x = self.text_encoder(x, mask)
-    #     return x
+
+class CustomClassifyVisionTransformer(nn.Module):
+    def __init__(
+        self,
+        image_encoder: Encoder,
+        num_classes: int,
+    ):
+        super().__init__()
+
+        self.image_encoder = image_encoder
+
+        self.local_emb = LocalEmbedding(image_encoder.layers[0].in_feature)
+
+        self.classifier = nn.Linear(self.image_encoder.features, num_classes)
+        
+        self.pos_emb = PositionEmbedding(image_encoder.layers[0].in_feature, image_encoder.layers[0].in_seq, 0.1)
+
+        self.num_params = 0
+
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+            if p.requires_grad:
+                self.num_params += p.numel()
+
+    def forward(self, x):
+        x = self.local_emb(x)
+        x = x.view(x.size(0), x.size(1), -1)  # flatten width and height
+        x = x.transpose(1, 2)  # pixel become sequence
+        x = self.pos_emb(x)
+        encoded = self.image_encoder(x, None)  # (batch, 1, features)
+        logits = self.classifier(encoded).squeeze(1)  # (batch, num_classes)
+        return logits

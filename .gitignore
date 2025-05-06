@@ -1,4 +1,5 @@
 __pycache__
 tokenizer
 runs
-default_weights
+checkpoint
+tmodel

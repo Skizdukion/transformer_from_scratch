@@ -24,7 +24,7 @@ class LocalEmbedding(nn.Module):
 
     def __init__(self, channel_out: int):
         super().__init__()
-        self.d_model = d_model
+        self.d_model = channel_out
         self.local_emb = nn.Conv2d(
             in_channels=3,
             out_channels=channel_out,
