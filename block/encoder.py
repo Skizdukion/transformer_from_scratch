@@ -28,15 +28,17 @@ class EncoderBlock(nn.Module):
             x, lambda x: self.self_att_block(x, x, x, src_mask)
         )
         x = self.residual_connections[1](x, self.ff)
+        # print(f"Sublayer forward time: {time.time() - start:.6f}s")
         return x
 
 
-class DownScaleBlock(nn.Module):
+class DownScaleEncoderBlock(nn.Module):
     def __init__(
         self,
         in_feature: int,
         out_feature: int,
         in_seq: int,
+        hidden_seq: int,
         out_seq: int,
         d_ff: int,
         num_head: int,
@@ -47,15 +49,16 @@ class DownScaleBlock(nn.Module):
             in_channel=in_feature,
             out_channel=out_feature,
             in_seq=in_seq,
+            hidden_seq=hidden_seq,
             out_seq=out_seq,
             num_head=num_head,
         )
 
         self.ff = FeedForwardBlock(out_feature, d_ff, dropout)
 
-        # self.residual_1 = ResidualConnectionDifferentScale(
-        #     in_feature, out_feature, in_seq, out_seq, dropout
-        # )
+        self.residual_1 = ResidualConnectionDifferentScale(
+            in_feature, out_feature, in_seq, out_seq, dropout
+        )
 
         self.residual_2 = ResidualConnection(out_feature, dropout)
 
@@ -67,8 +70,8 @@ class DownScaleBlock(nn.Module):
         self.in_feature = in_feature
 
     def forward(self, x, mask=None):
-        # x = self.residual_1(x, self.d_attention)
-        x = self.d_attention(x)
+        x = self.residual_1(x, self.d_attention)
+        # x = self.d_attention(x)
         x = self.residual_2(x, self.ff)
         # x = self.output_pos_emb(x)
         return x

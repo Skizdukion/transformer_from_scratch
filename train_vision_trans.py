@@ -86,7 +86,7 @@ def train_model():
     )
 
     model.to(device)
-    
+
     print(f"Model total params {model.num_params}")
 
     # Tensorboard

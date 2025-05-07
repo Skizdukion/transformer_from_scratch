@@ -1,7 +1,7 @@
 import torch
 import math
 import torch.nn as nn
-
+import time
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model: int, h: int, dropout: float):
@@ -34,6 +34,7 @@ class MultiHeadAttention(nn.Module):
         return (attention_score @ value), attention_score
 
     def forward(self, q, k, v, mask):
+        # start = time.time()
         query = self.w_q(q)
         key = self.w_k(k)
         value = self.w_v(v)
@@ -53,5 +54,6 @@ class MultiHeadAttention(nn.Module):
 
         # (batch, h, seq_len, d_k) -> (batch, seq_len, h, d_k) -> (batch, seq_len, d_model)
         x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.d_model)
+        # print(f"MHA forward time: {time.time() - start:.6f}s")
 
         return self.w_o(x)

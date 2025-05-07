@@ -1,7 +1,7 @@
 from pathlib import Path
 import torch
 from tqdm import tqdm
-from block.encoder import DownScaleBlock, Encoder
+from block.encoder import DownScaleEncoderBlock, Encoder
 from block.vision_transformer import CustomClassifyVisionTransformer
 from utils.weight_retrieve import get_weights_file_path, latest_weights_file_path
 from custom_vision_trans.config import get_config
@@ -61,10 +61,11 @@ def train_model():
     blocks = []
 
     for layer_config in config["layers"]:
-        block = DownScaleBlock(
+        block = DownScaleEncoderBlock(
             layer_config["in_feature"],
             layer_config["out_feature"],
             layer_config["in_seq"],
+            layer_config["hidden_seq"],
             layer_config["out_seq"],
             layer_config["d_ff"],
             layer_config["num_head"],

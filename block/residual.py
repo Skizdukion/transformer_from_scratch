@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from block.layer_norm import LayerNormalization
 
-
 class ResidualConnection(nn.Module):
     def __init__(self, features: int, dropout: float) -> None:
         super().__init__()
@@ -10,7 +9,10 @@ class ResidualConnection(nn.Module):
         self.norm = LayerNormalization(features)
 
     def forward(self, x, sublayer):
-        return x + self.dropout(sublayer(self.norm(x)))
+        normed = self.norm(x)
+        value = sublayer(normed) 
+        # print(f"Sublayer forward time: {time.time() - start:.6f}s")
+        return x + self.dropout(value)
 
 
 class ResidualConnectionDifferentScale(nn.Module):
