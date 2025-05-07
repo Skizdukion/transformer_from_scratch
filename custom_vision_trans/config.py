@@ -4,7 +4,7 @@ from pathlib import Path
 def get_config():
     layers_config = get_layer_config()
     return {
-        "batch_size": 32,
+        "batch_size": 128,
         "num_epochs": 60,
         "lr": 10**-4,
         "layers": layers_config,
