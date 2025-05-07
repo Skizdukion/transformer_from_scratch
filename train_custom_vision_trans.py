@@ -1,7 +1,9 @@
 from pathlib import Path
 import torch
 from tqdm import tqdm
-from block.encoder import DownScaleEncoderBlock, Encoder
+from block.encoder import EncoderBlock, FlexScaleEncoderBlock, Encoder
+from block.feed_forward import FeedForwardBlock
+from block.multihead_attention import MultiHeadAttention
 from block.vision_transformer import CustomClassifyVisionTransformer
 from utils.weight_retrieve import get_weights_file_path, latest_weights_file_path
 from custom_vision_trans.config import get_config
@@ -58,10 +60,10 @@ def train_model():
 
     (train_data_loader, val_data_loader, num_classes) = get_ds()
 
-    blocks = []
+    flexscale_blocks = []
 
     for layer_config in config["layers"]:
-        block = DownScaleEncoderBlock(
+        block = FlexScaleEncoderBlock(
             layer_config["in_feature"],
             layer_config["out_feature"],
             layer_config["in_seq"],
@@ -71,11 +73,35 @@ def train_model():
             layer_config["num_head"],
             layer_config["dropout"],
         )
-        blocks.append(block)
+        flexscale_blocks.append(block)
 
-    encoder = Encoder(blocks[len(blocks) - 1].out_feature, nn.ModuleList(blocks))
+    flex_scale_encoder = Encoder(
+        flexscale_blocks[len(flexscale_blocks) - 1].out_feature,
+        nn.ModuleList(flexscale_blocks),
+    )
 
-    model = CustomClassifyVisionTransformer(encoder, num_classes)
+    d_model = config["normal_layer"]["d_model"]
+    num_head = config["normal_layer"]["num_head"]
+    dropout = config["normal_layer"]["dropout"]
+    d_ff = config["normal_layer"]["d_ff"]
+    num_layer = config["normal_layer"]["num_layer"]
+
+    encoder = Encoder(
+        d_model,
+        nn.ModuleList(
+            [
+                EncoderBlock(
+                    d_model,
+                    MultiHeadAttention(d_model, num_head, dropout),
+                    FeedForwardBlock(d_model, d_ff, dropout),
+                    dropout,
+                )
+                for _ in range(num_layer)
+            ]
+        ),
+    )
+
+    model = CustomClassifyVisionTransformer(flex_scale_encoder, encoder, num_classes)
 
     model.to(device)
 

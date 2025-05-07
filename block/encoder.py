@@ -32,7 +32,7 @@ class EncoderBlock(nn.Module):
         return x
 
 
-class DownScaleEncoderBlock(nn.Module):
+class FlexScaleEncoderBlock(nn.Module):
     def __init__(
         self,
         in_feature: int,

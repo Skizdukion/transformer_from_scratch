@@ -1,11 +1,6 @@
 import torch
 import torch.nn as nn
-from block.feed_forward import FeedForwardBlock
-from block.layer_norm import LayerNormalization
-from block.multihead_attention import MultiHeadAttention
-from block.residual import ResidualConnection
 import math
-import time
 
 class FlexScaleSeqAttention(nn.Module):
     def __init__(
@@ -35,7 +30,7 @@ class FlexScaleSeqAttention(nn.Module):
         self.w_k = nn.Linear(in_channel, out_channel)
         self.w_v = nn.Linear(in_channel, out_channel)
 
-        self.flexscale_proj = nn.Linear(hidden_seq, out_seq)
+        self.out_seq_proj = nn.Linear(hidden_seq, out_seq)
 
     def forward(self, x):
         # start = time.time()
@@ -55,15 +50,15 @@ class FlexScaleSeqAttention(nn.Module):
         # cur = time.time()
 
         # Split into heads: [B, hidden_seq, num_heads, head_dim] -> [B, num_heads, in_seq, head_dim]
-        q = q.view(batch_size, self.hidden_seq, self.num_heads, self.head_dim).transpose(
-            1, 2
-        )
-        k = k.view(batch_size, self.hidden_seq, self.num_heads, self.head_dim).transpose(
-            1, 2
-        )
-        v = v.view(batch_size, self.hidden_seq, self.num_heads, self.head_dim).transpose(
-            1, 2
-        )
+        q = q.view(
+            batch_size, self.hidden_seq, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        k = k.view(
+            batch_size, self.hidden_seq, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        v = v.view(
+            batch_size, self.hidden_seq, self.num_heads, self.head_dim
+        ).transpose(1, 2)
 
         # print(f"Split heads: {time.time() - cur:.6f}s")
         # cur = time.time()
@@ -77,7 +72,7 @@ class FlexScaleSeqAttention(nn.Module):
 
         # Downscale across the sequence dimension
         # [B, num_heads, hidden_seq, out_seq]
-        flexscale = self.flexscale_proj(attn)  # projects hidden_seq → out_seq per head
+        flexscale = self.out_seq_proj(attn)  # projects hidden_seq → out_seq per head
 
         # Apply attention: [B, num_heads, out_seq, hidden_seq] x [B, num_heads, hidden_seq, head_dim]
         out = torch.matmul(

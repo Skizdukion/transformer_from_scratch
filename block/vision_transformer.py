@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from block.encoder import Encoder, EncoderBlock
+from block.encoder import Encoder, EncoderBlock, FlexScaleEncoderBlock
 from block.feed_forward import FeedForwardBlock
 from block.input_embedding import InputEmbedding
 from block.multihead_attention import MultiHeadAttention
@@ -77,6 +77,57 @@ class VisionTransformer(nn.Module):
 class CustomClassifyVisionTransformer(nn.Module):
     def __init__(
         self,
+        flexscale_encoder: Encoder,
+        image_encoder: Encoder,
+        num_classes: int,
+    ):
+        super().__init__()
+
+        self.image_encoder = image_encoder
+        self.flexscale_encoder = flexscale_encoder
+
+        self.local_emb = LocalEmbedding(image_encoder.layers[0].in_feature)
+
+        self.classifier = nn.Linear(self.image_encoder.features, num_classes)
+
+        self.pos_emb = PositionEmbedding(
+            image_encoder.layers[0].in_feature, image_encoder.layers[0].in_seq, 0.1
+        )
+
+        self.num_params = 0
+
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.image_encoder.features))
+        nn.init.trunc_normal_(self.cls_token, std=0.02)
+
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+            if p.requires_grad:
+                self.num_params += p.numel()
+
+    def forward(self, x):
+        x = self.local_emb(x)
+        x = x.view(x.size(0), x.size(1), -1)  # flatten width and height
+        x = x.transpose(1, 2)  # pixel become sequence
+        x = self.pos_emb(x)
+
+        x = self.flexscale_encoder(x)
+
+        B = x.size(0)
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, d_model)
+
+        x = torch.cat((cls_tokens, x), dim=1)
+        encoded = self.image_encoder(x, None)  # (batch, 1, features)
+
+        cls_token = encoded[:, 0]  # (batch, d_model)
+        logits = self.classifier(cls_token)  # (batch, num_classes)
+        return logits
+
+
+class CustomClassifyVisionTransformerOld(nn.Module):
+    def __init__(
+        self,
         image_encoder: Encoder,
         num_classes: int,
     ):
@@ -87,8 +138,10 @@ class CustomClassifyVisionTransformer(nn.Module):
         self.local_emb = LocalEmbedding(image_encoder.layers[0].in_feature)
 
         self.classifier = nn.Linear(self.image_encoder.features, num_classes)
-        
-        self.pos_emb = PositionEmbedding(image_encoder.layers[0].in_feature, image_encoder.layers[0].in_seq, 0.1)
+
+        self.pos_emb = PositionEmbedding(
+            image_encoder.layers[0].in_feature, image_encoder.layers[0].in_seq, 0.1
+        )
 
         self.num_params = 0
 
