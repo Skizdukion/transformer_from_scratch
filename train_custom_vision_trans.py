@@ -86,7 +86,7 @@ def train_model():
     d_ff = config["normal_layer"]["d_ff"]
     num_layer = config["normal_layer"]["num_layer"]
 
-    encoder = Encoder(
+    normal_encoder = Encoder(
         d_model,
         nn.ModuleList(
             [
@@ -101,7 +101,7 @@ def train_model():
         ),
     )
 
-    model = CustomClassifyVisionTransformer(flex_scale_encoder, encoder, num_classes)
+    model = CustomClassifyVisionTransformer(flex_scale_encoder, normal_encoder, num_classes)
 
     model.to(device)
 

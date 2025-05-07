@@ -39,6 +39,7 @@ def get_normal_layer():
         "d_model": 128,
         "d_ff": 1024,
         "num_layer": 5,
+        "num_head": 8,
         "dropout": 0.1,
     }
 
