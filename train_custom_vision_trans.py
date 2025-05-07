@@ -62,7 +62,7 @@ def train_model():
 
     flexscale_blocks = []
 
-    for layer_config in config["layers"]:
+    for layer_config in config["flexscale_layer"]:
         block = FlexScaleEncoderBlock(
             layer_config["in_feature"],
             layer_config["out_feature"],
