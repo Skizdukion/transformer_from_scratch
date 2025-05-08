@@ -2,6 +2,7 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 from block.encoder import (
+    ApplyClsBlock,
     EncoderBlock,
     Encoder,
     LatentEncoderBlock,
@@ -67,13 +68,15 @@ def train_model():
             config["compressor_layer"]["latent_tokens"],
             config["compressor_layer"]["d_model"],
             config["compressor_layer"]["d_ff"],
-            config["compressor_layer"]["num_head"],
+            config["compressor_layer"]["num_heads"],
             config["compressor_layer"]["dropout"],
         )
     )
 
+    blocks.append(ApplyClsBlock(config["compressor_layer"]["d_model"]))
+
     d_model = config["normal_layer"]["d_model"]
-    num_head = config["normal_layer"]["num_head"]
+    num_heads = config["normal_layer"]["num_heads"]
     dropout = config["normal_layer"]["dropout"]
     d_ff = config["normal_layer"]["d_ff"]
     num_layer = config["normal_layer"]["num_layer"]
@@ -82,7 +85,7 @@ def train_model():
         blocks.append(
             EncoderBlock(
                 d_model,
-                MultiHeadAttention(d_model, num_head, dropout),
+                MultiHeadAttention(d_model, num_heads, dropout),
                 FeedForwardBlock(d_model, d_ff, dropout),
                 dropout,
             )

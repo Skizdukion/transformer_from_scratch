@@ -10,7 +10,7 @@ def get_config():
         "seq_len": 350,
         "d_model": 256,
         "d_ff": 2048,
-        "num_head": 8,
+        "num_heads": 8,
         "num_layer": 6,
         "dropout": 0.1,
         "datasource": "IWSLT/mt_eng_vietnamese",

@@ -61,7 +61,7 @@ def train_model():
     (train_data_loader, val_data_loader, num_classes) = get_ds()
 
     d_model = config["d_model"]
-    num_head = config["num_head"]
+    num_heads = config["num_heads"]
     dropout = config["dropout"]
     d_ff = config["d_ff"]
     num_layer = config["num_layer"]
@@ -72,7 +72,7 @@ def train_model():
             [
                 EncoderBlock(
                     d_model,
-                    MultiHeadAttention(d_model, num_head, dropout),
+                    MultiHeadAttention(d_model, num_heads, dropout),
                     FeedForwardBlock(d_model, d_ff, dropout),
                     dropout,
                 )

@@ -18,14 +18,14 @@ class Transformer(nn.Module):
         max_seq_len: int,
         src_vocab_size: int,
         tgt_vocab_size: int,
-        num_head: int,
+        num_heads: int,
         num_layer: int,
         dropout: float,
     ):
         super().__init__()
         self.d_model = d_model
         self.vocab_size = src_vocab_size
-        self.num_head = num_head
+        self.num_heads = num_heads
         self.num_layers = num_layer
         self.src_input_embedding = InputEmbedding(d_model, src_vocab_size)
         self.tgt_input_embedding = InputEmbedding(d_model, tgt_vocab_size)
@@ -36,7 +36,7 @@ class Transformer(nn.Module):
                 [
                     EncoderBlock(
                         d_model,
-                        MultiHeadAttention(d_model, num_head, dropout),
+                        MultiHeadAttention(d_model, num_heads, dropout),
                         FeedForwardBlock(d_model, d_ff, dropout),
                         dropout,
                     )
@@ -50,8 +50,8 @@ class Transformer(nn.Module):
                 [
                     DecoderBlock(
                         d_model,
-                        MultiHeadAttention(d_model, num_head, dropout),
-                        MultiHeadAttention(d_model, num_head, dropout),
+                        MultiHeadAttention(d_model, num_heads, dropout),
+                        MultiHeadAttention(d_model, num_heads, dropout),
                         FeedForwardBlock(d_model, d_ff, dropout),
                         dropout,
                     )

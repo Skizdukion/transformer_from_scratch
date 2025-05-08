@@ -39,20 +39,24 @@ class LatentEncoderBlock(nn.Module):
         latent_tokens: int,
         d_model: int,
         d_ff: int,
-        num_head: int,
+        num_heads: int,
         dropout: float,
     ):
         super().__init__()
         self.compressor = LatentCompressor(
-            latent_tokens=latent_tokens, d_model=d_model, num_head=num_head
+            latent_tokens=latent_tokens, d_model=d_model, num_heads=num_heads
         )
         self.ff = FeedForwardBlock(d_model, d_ff, dropout)
         self.residual_connection_ff = ResidualConnection(d_model, dropout)
+        self.latent_tokens = latent_tokens
+        self.d_model = d_model
+        self.num_heads = num_heads
 
     def forward(self, x, src_mask=None):
-        x = self.compressor(x)  # 👈 no residual here, x now becomes latent
+        x = self.compressor(x)
         x = self.residual_connection_ff(x, self.ff)
         return x
+
 
 class FlexScaleEncoderBlock(nn.Module):
     def __init__(
@@ -62,7 +66,7 @@ class FlexScaleEncoderBlock(nn.Module):
         in_seq: int,
         out_seq: int,
         d_ff: int,
-        num_head: int,
+        num_heads: int,
         dropout: float,
     ):
         super().__init__()
@@ -71,7 +75,7 @@ class FlexScaleEncoderBlock(nn.Module):
             dmodel_out=out_feature,
             in_seq=in_seq,
             out_seq=out_seq,
-            num_head=num_head,
+            num_heads=num_heads,
         )
 
         self.ff = FeedForwardBlock(out_feature, d_ff, dropout)
@@ -95,6 +99,18 @@ class FlexScaleEncoderBlock(nn.Module):
         x = self.residual_2(x, self.ff)
         # x = self.output_pos_emb(x)
         return x
+
+
+class ApplyClsBlock(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        nn.init.trunc_normal_(self.cls_token, std=0.02)
+
+    def forward(self, x, mask):
+        B = x.size(0)
+        cls_tokens = self.cls_token.expand(B, -1, -1)
+        return torch.cat((cls_tokens, x), dim=1)
 
 
 class Encoder(nn.Module):

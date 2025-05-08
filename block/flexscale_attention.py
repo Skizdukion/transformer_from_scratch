@@ -10,19 +10,19 @@ class DownScaleSeqAttention(nn.Module):
         dmodel_out: int,
         in_seq: int,
         out_seq: int,
-        num_head: int,
+        num_heads: int,
     ):
         super().__init__()
 
-        assert dmodel_out % num_head == 0, "out_channel must be divisible by num_heads"
+        assert dmodel_out % num_heads == 0, "out_channel must be divisible by num_heads"
         assert in_seq % out_seq == 0, "in_seq must be divisible by out_seq"
 
         self.dmodel_in = dmodel_in
         self.dmodel_out = dmodel_out
         self.in_seq = in_seq
         self.out_seq = out_seq
-        self.num_heads = num_head
-        self.head_dim = dmodel_out // num_head
+        self.num_heads = num_heads
+        self.head_dim = dmodel_out // num_heads
 
         self.num_channel = in_seq // out_seq
         self.seq_proj = nn.ModuleList(
@@ -98,19 +98,19 @@ class FlexScaleSeqAttentionV1(nn.Module):
         in_seq: int,
         hidden_seq: int,
         out_seq: int,
-        num_head: int,
+        num_heads: int,
     ):
         super().__init__()
 
-        assert out_channel % num_head == 0, "out_channel must be divisible by num_heads"
+        assert out_channel % num_heads == 0, "out_channel must be divisible by num_heads"
 
         self.in_channel = in_channel
         self.hidden_seq = hidden_seq
         self.out_channel = out_channel
         self.in_seq = in_seq
         self.out_seq = out_seq
-        self.num_heads = num_head
-        self.head_dim = out_channel // num_head
+        self.num_heads = num_heads
+        self.head_dim = out_channel // num_heads
 
         self.hidden_seq_proj = nn.Linear(in_seq, hidden_seq)
 

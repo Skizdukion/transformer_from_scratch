@@ -19,15 +19,13 @@ def get_config():
 
 
 def get_compressor_layer():
-    return [
-        {
-            "latent_tokens": 128,
-            "d_model": 128,
-            "d_ff": 1024,
-            "num_head": 8,
-            "dropout": 0.1,
-        },
-    ]
+    return {
+        "latent_tokens": 128,
+        "d_model": 128,
+        "d_ff": 1024,
+        "num_heads": 8,
+        "dropout": 0.1,
+    }
 
 
 def get_normal_layer():
@@ -36,7 +34,7 @@ def get_normal_layer():
         "d_model": 128,
         "d_ff": 1024,
         "num_layer": 2,
-        "num_head": 8,
+        "num_heads": 8,
         "dropout": 0.1,
     }
 
@@ -50,7 +48,7 @@ def get_normal_layer():
 #             "hidden_seq": 256,
 #             "out_seq": 512,
 #             "d_ff": 1024,
-#             "num_head": 8,
+#             "num_heads": 8,
 #             "dropout": 0.1,
 #         },
 #         {
@@ -60,7 +58,7 @@ def get_normal_layer():
 #             "hidden_seq": 256,
 #             "out_seq": 256,
 #             "d_ff": 1024,
-#             "num_head": 8,
+#             "num_heads": 8,
 #             "dropout": 0.1,
 #         },
 #         {
@@ -70,7 +68,7 @@ def get_normal_layer():
 #             "hidden_seq": 256,
 #             "out_seq": 128,
 #             "d_ff": 1024,
-#             "num_head": 8,
+#             "num_heads": 8,
 #             "dropout": 0.1,
 #         },
 #         {
@@ -80,7 +78,7 @@ def get_normal_layer():
 #             "hidden_seq": 256,
 #             "out_seq": 64,
 #             "d_ff": 1024,
-#             "num_head": 8,
+#             "num_heads": 8,
 #             "dropout": 0.1,
 #         },
 #         {
@@ -90,7 +88,7 @@ def get_normal_layer():
 #             "hidden_seq": 256,
 #             "out_seq": 32,
 #             "d_ff": 1024,
-#             "num_head": 8,
+#             "num_heads": 8,
 #             "dropout": 0.1,
 #         },
 #         {
@@ -100,7 +98,7 @@ def get_normal_layer():
 #             "hidden_seq": 256,
 #             "out_seq": 1,
 #             "d_ff": 1024,
-#             "num_head": 8,
+#             "num_heads": 8,
 #             "dropout": 0.1,
 #         },
 #     ]

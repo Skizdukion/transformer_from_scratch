@@ -126,7 +126,7 @@ def train_model():
         config["seq_len"],
         tokenizer_src.get_vocab_size(),
         tokenizer_tgt.get_vocab_size(),
-        config["num_head"],
+        config["num_heads"],
         config["num_layer"],
         config["dropout"],
     )

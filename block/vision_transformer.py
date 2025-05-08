@@ -90,15 +90,12 @@ class CustomClassifyVisionTransformer(nn.Module):
         self.classifier = nn.Linear(self.image_encoder.features, num_classes)
 
         self.pos_emb = PositionEmbedding(
-            image_encoder.layers[0].features,
+            image_encoder.features,
             input_seq,
             0.1,
         )
 
         self.num_params = 0
-
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, self.image_encoder.features))
-        nn.init.trunc_normal_(self.cls_token, std=0.02)
 
         for p in self.parameters():
             if p.dim() > 1:
@@ -113,13 +110,6 @@ class CustomClassifyVisionTransformer(nn.Module):
         x = x.transpose(1, 2)  # pixel become sequence
         x = self.pos_emb(x)
 
-        x = self.flexscale_encoder(x, None)  # (B, S, D)
-
-        B = x.size(0)
-        cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, d_model)
-
-        x = torch.cat((cls_tokens, x), dim=1)
-        x = self.normal_pos_emb(x)
         encoded = self.image_encoder(x, None)  # (batch, 1, features)
 
         cls_token = encoded[:, 0]  # (batch, d_model)

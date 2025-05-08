@@ -10,7 +10,7 @@ def get_config():
         "patch_size": 4,
         "d_model": 128,
         "d_ff": 1024,
-        "num_head": 8,
+        "num_heads": 8,
         "num_layer": 6,
         "dropout": 0.1,
         "datasource": "cifar10",
