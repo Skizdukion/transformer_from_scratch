@@ -2,13 +2,13 @@ from pathlib import Path
 
 
 def get_config():
-    flexscale_layer = get_flexscale_layer()
+    compressor = get_compressor_layer()
     normal_layer = get_normal_layer()
     return {
-        "batch_size": 512,
+        "batch_size": 4,
         "num_epochs": 60,
         "lr": 10**-4,
-        "flexscale_layer": flexscale_layer,
+        "compressor_layer": compressor,
         "normal_layer": normal_layer,
         "datasource": "cifar10",
         "model_folder": "custom_vision_trans",
@@ -18,13 +18,11 @@ def get_config():
     }
 
 
-def get_flexscale_layer():
+def get_compressor_layer():
     return [
         {
-            "in_feature": 3,
-            "out_feature": 128,
-            "in_seq": 1024,
-            "out_seq": 128,
+            "latent_tokens": 128,
+            "d_model": 128,
             "d_ff": 1024,
             "num_head": 8,
             "dropout": 0.1,

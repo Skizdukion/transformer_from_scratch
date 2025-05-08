@@ -77,28 +77,21 @@ class VisionTransformer(nn.Module):
 class CustomClassifyVisionTransformer(nn.Module):
     def __init__(
         self,
-        flexscale_encoder: Encoder,
         image_encoder: Encoder,
+        input_seq: int,
         num_classes: int,
     ):
         super().__init__()
 
         self.image_encoder = image_encoder
-        self.flexscale_encoder = flexscale_encoder
 
-        self.local_emb = LocalEmbedding(flexscale_encoder.layers[0].in_feature)
+        self.local_emb = LocalEmbedding(image_encoder.layers[0].d_model)
 
         self.classifier = nn.Linear(self.image_encoder.features, num_classes)
 
-        self.flexscale_pos_emb = PositionEmbedding(
-            flexscale_encoder.layers[0].in_feature,
-            flexscale_encoder.layers[0].in_seq,
-            0.1,
-        )
-
-        self.normal_pos_emb = PositionEmbedding(
-            self.image_encoder.features,
-            flexscale_encoder.layers[len(flexscale_encoder.layers) - 1].out_seq + 1,
+        self.pos_emb = PositionEmbedding(
+            image_encoder.layers[0].features,
+            input_seq,
             0.1,
         )
 
@@ -118,7 +111,7 @@ class CustomClassifyVisionTransformer(nn.Module):
         x = self.local_emb(x)
         x = x.view(x.size(0), x.size(1), -1)  # flatten width and height
         x = x.transpose(1, 2)  # pixel become sequence
-        x = self.flexscale_pos_emb(x)
+        x = self.pos_emb(x)
 
         x = self.flexscale_encoder(x, None)  # (B, S, D)
 

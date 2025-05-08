@@ -1,7 +1,11 @@
 from pathlib import Path
 import torch
 from tqdm import tqdm
-from block.encoder import EncoderBlock, FlexScaleEncoderBlock, Encoder
+from block.encoder import (
+    EncoderBlock,
+    Encoder,
+    LatentEncoderBlock,
+)
 from block.feed_forward import FeedForwardBlock
 from block.multihead_attention import MultiHeadAttention
 from block.vision_transformer import CustomClassifyVisionTransformer
@@ -29,7 +33,6 @@ def run_validation(model, validation_loader, device, print_msg=print):
         float: accuracy on the validation set.
     """
     model.eval()
-    total_loss = 0.0
     correct = 0
     total = 0
 
@@ -44,11 +47,10 @@ def run_validation(model, validation_loader, device, print_msg=print):
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
-    avg_loss = total_loss / total
     accuracy = correct / total
 
-    print_msg(f"Validation Loss: {avg_loss:.4f} | Accuracy: {accuracy:.2%}")
-    return avg_loss, accuracy
+    print_msg(f"Accuracy: {accuracy:.2%}")
+    return accuracy
 
 
 def train_model():
@@ -59,24 +61,15 @@ def train_model():
     Path(config["model_folder"]).mkdir(parents=True, exist_ok=True)
 
     (train_data_loader, val_data_loader, num_classes) = get_ds()
-
-    flexscale_blocks = []
-
-    for layer_config in config["flexscale_layer"]:
-        block = FlexScaleEncoderBlock(
-            layer_config["in_feature"],
-            layer_config["out_feature"],
-            layer_config["in_seq"],
-            layer_config["out_seq"],
-            layer_config["d_ff"],
-            layer_config["num_head"],
-            layer_config["dropout"],
+    blocks = []
+    blocks.append(
+        LatentEncoderBlock(
+            config["compressor_layer"]["latent_tokens"],
+            config["compressor_layer"]["d_model"],
+            config["compressor_layer"]["d_ff"],
+            config["compressor_layer"]["num_head"],
+            config["compressor_layer"]["dropout"],
         )
-        flexscale_blocks.append(block)
-
-    flex_scale_encoder = Encoder(
-        flexscale_blocks[len(flexscale_blocks) - 1].out_feature,
-        nn.ModuleList(flexscale_blocks),
     )
 
     d_model = config["normal_layer"]["d_model"]
@@ -85,23 +78,20 @@ def train_model():
     d_ff = config["normal_layer"]["d_ff"]
     num_layer = config["normal_layer"]["num_layer"]
 
-    normal_encoder = Encoder(
-        d_model,
-        nn.ModuleList(
-            [
-                EncoderBlock(
-                    d_model,
-                    MultiHeadAttention(d_model, num_head, dropout),
-                    FeedForwardBlock(d_model, d_ff, dropout),
-                    dropout,
-                )
-                for _ in range(num_layer)
-            ]
-        ),
-    )
+    for _ in range(num_layer):
+        blocks.append(
+            EncoderBlock(
+                d_model,
+                MultiHeadAttention(d_model, num_head, dropout),
+                FeedForwardBlock(d_model, d_ff, dropout),
+                dropout,
+            )
+        )
 
     model = CustomClassifyVisionTransformer(
-        flex_scale_encoder, normal_encoder, num_classes
+        Encoder(d_model, nn.ModuleList(blocks)),
+        1024,
+        num_classes,
     )
 
     model.to(device)
@@ -139,7 +129,7 @@ def train_model():
         for batch in batch_iterator:
             model.train()
 
-            mask = None
+            # mask = None
 
             images, labels = batch
 

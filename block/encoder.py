@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from block.flexscale_attention import DownScaleSeqAttention
 from block.feed_forward import FeedForwardBlock
+from block.latent_compressor import LatentCompressor
 from block.layer_norm import LayerNormalization
 from block.multihead_attention import MultiHeadAttention
 from block.positional_encoding import PositionEmbedding
@@ -31,6 +32,27 @@ class EncoderBlock(nn.Module):
         # print(f"Sublayer forward time: {time.time() - start:.6f}s")
         return x
 
+
+class LatentEncoderBlock(nn.Module):
+    def __init__(
+        self,
+        latent_tokens: int,
+        d_model: int,
+        d_ff: int,
+        num_head: int,
+        dropout: float,
+    ):
+        super().__init__()
+        self.compressor = LatentCompressor(
+            latent_tokens=latent_tokens, d_model=d_model, num_head=num_head
+        )
+        self.ff = FeedForwardBlock(d_model, d_ff, dropout)
+        self.residual_connection_ff = ResidualConnection(d_model, dropout)
+
+    def forward(self, x, src_mask=None):
+        x = self.compressor(x)  # 👈 no residual here, x now becomes latent
+        x = self.residual_connection_ff(x, self.ff)
+        return x
 
 class FlexScaleEncoderBlock(nn.Module):
     def __init__(
