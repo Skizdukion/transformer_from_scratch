@@ -21,11 +21,10 @@ def get_config():
 def get_flexscale_layer():
     return [
         {
-            "in_feature": 32,
+            "in_feature": 3,
             "out_feature": 128,
             "in_seq": 1024,
-            "hidden_seq": 256,
-            "out_seq": 64,
+            "out_seq": 128,
             "d_ff": 1024,
             "num_head": 8,
             "dropout": 0.1,
@@ -35,7 +34,7 @@ def get_flexscale_layer():
 
 def get_normal_layer():
     return {
-        "seq_len": 64,
+        "seq_len": 128,
         "d_model": 128,
         "d_ff": 1024,
         "num_layer": 5,

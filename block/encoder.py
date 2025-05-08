@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from block.flexscale_attention import FlexScaleSeqAttention
+from block.flexscale_attention import DownScaleSeqAttention
 from block.feed_forward import FeedForwardBlock
 from block.layer_norm import LayerNormalization
 from block.multihead_attention import MultiHeadAttention
@@ -38,18 +38,16 @@ class FlexScaleEncoderBlock(nn.Module):
         in_feature: int,
         out_feature: int,
         in_seq: int,
-        hidden_seq: int,
         out_seq: int,
         d_ff: int,
         num_head: int,
         dropout: float,
     ):
         super().__init__()
-        self.d_attention = FlexScaleSeqAttention(
-            in_channel=in_feature,
-            out_channel=out_feature,
+        self.d_attention = DownScaleSeqAttention(
+            dmodel_in=in_feature,
+            dmodel_out=out_feature,
             in_seq=in_seq,
-            hidden_seq=hidden_seq,
             out_seq=out_seq,
             num_head=num_head,
         )

@@ -67,7 +67,6 @@ def train_model():
             layer_config["in_feature"],
             layer_config["out_feature"],
             layer_config["in_seq"],
-            layer_config["hidden_seq"],
             layer_config["out_seq"],
             layer_config["d_ff"],
             layer_config["num_head"],
@@ -101,7 +100,9 @@ def train_model():
         ),
     )
 
-    model = CustomClassifyVisionTransformer(flex_scale_encoder, normal_encoder, num_classes)
+    model = CustomClassifyVisionTransformer(
+        flex_scale_encoder, normal_encoder, num_classes
+    )
 
     model.to(device)
 

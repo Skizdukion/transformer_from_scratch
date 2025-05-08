@@ -2,7 +2,89 @@ import torch
 import torch.nn as nn
 import math
 
-class FlexScaleSeqAttention(nn.Module):
+
+class DownScaleSeqAttention(nn.Module):
+    def __init__(
+        self,
+        dmodel_in: int,
+        dmodel_out: int,
+        in_seq: int,
+        out_seq: int,
+        num_head: int,
+    ):
+        super().__init__()
+
+        assert dmodel_out % num_head == 0, "out_channel must be divisible by num_heads"
+        assert in_seq % out_seq == 0, "in_seq must be divisible by out_seq"
+
+        self.dmodel_in = dmodel_in
+        self.dmodel_out = dmodel_out
+        self.in_seq = in_seq
+        self.out_seq = out_seq
+        self.num_heads = num_head
+        self.head_dim = dmodel_out // num_head
+
+        self.num_channel = in_seq // out_seq
+
+        self.seq_proj = [nn.Linear(in_seq, out_seq) for _ in range(self.num_channel)]
+
+        self.w_q = [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+        self.w_k = [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+        self.w_v = [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+
+    def attention(self, x, channel_id):
+        batch_size = x.size(0)
+        x = self.seq_proj[channel_id](x.transpose(1, 2)).transpose(1, 2)
+
+        q = self.w_q[channel_id](x)
+        k = self.w_k[channel_id](x)
+        v = self.w_v[channel_id](x)
+
+        q = q.view(batch_size, self.out_seq, self.num_heads, self.head_dim).transpose(
+            1, 2
+        )
+        k = k.view(batch_size, self.out_seq, self.num_heads, self.head_dim).transpose(
+            1, 2
+        )
+        v = v.view(batch_size, self.out_seq, self.num_heads, self.head_dim).transpose(
+            1, 2
+        )
+
+        scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        attn = scores.softmax(dim=-1)
+
+        out = attn @ v
+
+        out = (
+            out.transpose(1, 2)
+            .contiguous()
+            .view(batch_size, self.out_seq, self.dmodel_out)
+        )
+
+        return out
+
+    def forward(self, x):
+        assert x.shape[1] == self.in_seq
+        assert x.shape[2] == self.dmodel_in
+        arr = []
+
+        for i in range(self.num_channel):
+            arr.append(self.attention(x, i))
+
+        stacked = torch.stack(arr, dim=0)
+
+        # Compute mean and std across the first dimension (N)
+        mean = stacked.mean(dim=0)  # Shape: (B, S, D)
+        std = stacked.std(dim=0, unbiased=False)  # Shape: (B, S, D)
+
+        normalized = (stacked - mean) / (std + 1e-6)
+
+        output = normalized.mean(dim=0)  # Shape: (B, S, D)
+
+        return output
+
+
+class FlexScaleSeqAttentionV1(nn.Module):
     def __init__(
         self,
         in_channel: int,
