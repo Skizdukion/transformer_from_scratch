@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from block.encoder import Encoder, EncoderBlock, FlexScaleEncoderBlock
+from block.encoder import Encoder
 from block.feed_forward import FeedForwardBlock
 from block.input_embedding import InputEmbedding
 from block.multihead_attention import MultiHeadAttention
@@ -96,6 +96,12 @@ class CustomClassifyVisionTransformer(nn.Module):
             0.1,
         )
 
+        self.normal_pos_emb = PositionEmbedding(
+            self.image_encoder.features,
+            flexscale_encoder.layers[len(flexscale_encoder.layers) - 1].out_seq + 1,
+            0.1,
+        )
+
         self.num_params = 0
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1, self.image_encoder.features))
@@ -114,12 +120,13 @@ class CustomClassifyVisionTransformer(nn.Module):
         x = x.transpose(1, 2)  # pixel become sequence
         x = self.flexscale_pos_emb(x)
 
-        x = self.flexscale_encoder(x, None)
+        x = self.flexscale_encoder(x, None)  # (B, S, D)
 
         B = x.size(0)
         cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, d_model)
 
         x = torch.cat((cls_tokens, x), dim=1)
+        x = self.normal_pos_emb(x)
         encoded = self.image_encoder(x, None)  # (batch, 1, features)
 
         cls_token = encoded[:, 0]  # (batch, d_model)

@@ -38,6 +38,8 @@ class DownScaleSeqAttention(nn.Module):
             [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
         )
 
+        self.channel_mixer = nn.Linear(self.num_channel, 1)
+
     def attention(self, x, channel_id):
         batch_size = x.size(0)
         x = self.seq_proj[channel_id](x.transpose(1, 2)).transpose(1, 2)
@@ -72,20 +74,16 @@ class DownScaleSeqAttention(nn.Module):
     def forward(self, x):
         assert x.shape[1] == self.in_seq
         assert x.shape[2] == self.dmodel_in
-        arr = []
 
-        for i in range(self.num_channel):
-            arr.append(self.attention(x, i))
+        arr = [
+            self.attention(x, i) for i in range(self.num_channel)
+        ]  # list of (B, S, D)
+        stacked = torch.stack(arr, dim=1)  # Shape: (B, C, S, D)
 
-        stacked = torch.stack(arr, dim=0)
-
-        # Compute mean and std across the first dimension (N)
-        mean = stacked.mean(dim=0)  # Shape: (B, S, D)
-        std = stacked.std(dim=0, unbiased=False)  # Shape: (B, S, D)
-
-        normalized = (stacked - mean) / (std + 1e-6)
-
-        output = normalized.mean(dim=0)  # Shape: (B, S, D)
+        # 👇 Reshape for mixing: move C to last and apply linear
+        # B, C, S, D = stacked.shape
+        mixed = self.channel_mixer(stacked.permute(0, 2, 3, 1))  # (B, S, D, 1)
+        output = mixed.squeeze(-1)  # (B, S, D)
 
         return output
 
