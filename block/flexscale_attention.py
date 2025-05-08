@@ -25,12 +25,18 @@ class DownScaleSeqAttention(nn.Module):
         self.head_dim = dmodel_out // num_head
 
         self.num_channel = in_seq // out_seq
-
-        self.seq_proj = [nn.Linear(in_seq, out_seq) for _ in range(self.num_channel)]
-
-        self.w_q = [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
-        self.w_k = [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
-        self.w_v = [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+        self.seq_proj = nn.ModuleList(
+            [nn.Linear(in_seq, out_seq) for _ in range(self.num_channel)]
+        )
+        self.w_q = nn.ModuleList(
+            [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+        )
+        self.w_k = nn.ModuleList(
+            [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+        )
+        self.w_v = nn.ModuleList(
+            [nn.Linear(dmodel_in, dmodel_out) for _ in range(self.num_channel)]
+        )
 
     def attention(self, x, channel_id):
         batch_size = x.size(0)
