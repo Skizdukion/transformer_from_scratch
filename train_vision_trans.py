@@ -58,7 +58,7 @@ def train_model():
 
     Path(config["model_folder"]).mkdir(parents=True, exist_ok=True)
 
-    (train_data_loader, val_data_loader, num_classes) = get_cifar10_vision_ds()()
+    (train_data_loader, val_data_loader, num_classes) = get_cifar10_vision_ds()
 
     d_model = config["d_model"]
     num_heads = config["num_heads"]
