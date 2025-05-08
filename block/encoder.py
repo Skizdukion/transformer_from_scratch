@@ -6,7 +6,11 @@ from block.latent_compressor import LatentCompressor
 from block.layer_norm import LayerNormalization
 from block.multihead_attention import MultiHeadAttention
 from block.positional_encoding import PositionEmbedding
-from block.residual import ResidualConnection, ResidualConnectionDifferentScale
+from block.residual import (
+    LatentResidualConnection,
+    ResidualConnection,
+    ResidualConnectionDifferentScale,
+)
 
 
 class EncoderBlock(nn.Module):
@@ -36,6 +40,7 @@ class EncoderBlock(nn.Module):
 class LatentEncoderBlock(nn.Module):
     def __init__(
         self,
+        in_seq: int,
         latent_tokens: int,
         d_model: int,
         d_ff: int,
@@ -47,14 +52,18 @@ class LatentEncoderBlock(nn.Module):
             latent_tokens=latent_tokens, d_model=d_model, num_heads=num_heads
         )
         self.ff = FeedForwardBlock(d_model, d_ff, dropout)
-        self.residual_connection_ff = ResidualConnection(d_model, dropout)
+        self.residual_1 = LatentResidualConnection(
+            d_model, in_seq, latent_tokens, dropout
+        )
+
+        self.residual_2 = ResidualConnection(d_model, dropout)
         self.latent_tokens = latent_tokens
         self.d_model = d_model
         self.num_heads = num_heads
 
     def forward(self, x, src_mask=None):
-        x = self.compressor(x)
-        x = self.residual_connection_ff(x, self.ff)
+        x = self.residual_1(x, self.compressor)
+        x = self.residual_2(x, self.ff)
         return x
 
 

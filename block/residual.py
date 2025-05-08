@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from block.layer_norm import LayerNormalization
 
+
 class ResidualConnection(nn.Module):
     def __init__(self, features: int, dropout: float) -> None:
         super().__init__()
@@ -10,9 +11,38 @@ class ResidualConnection(nn.Module):
 
     def forward(self, x, sublayer):
         normed = self.norm(x)
-        value = sublayer(normed) 
+        value = sublayer(normed)
         # print(f"Sublayer forward time: {time.time() - start:.6f}s")
         return x + self.dropout(value)
+
+
+class LatentResidualConnection(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        in_seq: int,
+        out_seq: int,
+        dropout: float,
+    ) -> None:
+        super().__init__()
+        self.out_seq = out_seq
+        self.dropout = nn.Dropout(dropout)
+        self.norm = LayerNormalization(d_model)
+        self.seq_proj = nn.Linear(in_seq, out_seq)
+
+    def forward(self, x, sublayer):
+        """
+        x: [batch, in_seq, in_features]
+        sublayer(norm(x)): [batch, out_seq, out_feature]
+        """
+        normed = self.norm(x)
+        value = sublayer(normed)  # Expected shape: [batch, in_seq, d_model]
+
+        x_proj = self.seq_proj(x.transpose(1, 2))
+        x_proj = x_proj.transpose(1, 2)
+
+        assert x_proj.shape == value.shape
+        return x_proj + self.dropout(value)
 
 
 class ResidualConnectionDifferentScale(nn.Module):

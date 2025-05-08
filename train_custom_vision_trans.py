@@ -65,6 +65,7 @@ def train_model():
     blocks = []
     blocks.append(
         LatentEncoderBlock(
+            1024,
             config["compressor_layer"]["latent_tokens"],
             config["compressor_layer"]["d_model"],
             config["compressor_layer"]["d_ff"],
