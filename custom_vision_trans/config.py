@@ -5,7 +5,7 @@ def get_config():
     flexscale_layer = get_flexscale_layer()
     normal_layer = get_normal_layer()
     return {
-        "batch_size": 128,
+        "batch_size": 512,
         "num_epochs": 60,
         "lr": 10**-4,
         "flexscale_layer": flexscale_layer,
