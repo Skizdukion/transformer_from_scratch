@@ -10,9 +10,9 @@ from block.encoder import (
 from block.feed_forward import FeedForwardBlock
 from block.multihead_attention import MultiHeadAttention
 from block.vision_transformer import CustomClassifyVisionTransformer
+from dataset.vision_dataset import get_cifar10_vision_ds
 from utils.weight_retrieve import get_weights_file_path, latest_weights_file_path
 from custom_vision_trans.config import get_config
-from custom_vision_trans.dataset import get_ds
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import warnings
@@ -61,7 +61,7 @@ def train_model():
 
     Path(config["model_folder"]).mkdir(parents=True, exist_ok=True)
 
-    (train_data_loader, val_data_loader, num_classes) = get_ds()
+    (train_data_loader, val_data_loader, num_classes) = get_cifar10_vision_ds()
     blocks = []
     blocks.append(
         LatentEncoderBlock(

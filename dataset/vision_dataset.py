@@ -54,7 +54,7 @@ class CustomCIFAR10Dataset(Dataset):
         return image, label
 
 
-def get_ds():
+def get_cifar10_vision_ds():
     dataset = load_dataset("cifar10")
     config = get_config()
     train_dataset = CustomCIFAR10Dataset(dataset["train"], augment=True)
