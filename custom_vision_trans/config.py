@@ -5,7 +5,7 @@ def get_config():
     compressor = get_compressor_layer()
     normal_layer = get_normal_layer()
     return {
-        "batch_size": 4,
+        "batch_size": 256,
         "num_epochs": 60,
         "lr": 10**-4,
         "compressor_layer": compressor,
